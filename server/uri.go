@@ -52,7 +52,16 @@ func (_ *URI) translateLoopbackIP(uri string, conn net.Conn) string {
 		return uri
 	}
 
-	addr := conn.RemoteAddr().(*net.TCPAddr).IP.String()
+	// if the conn is made through a ssh remote port-forward, conn.RemoteAddr()
+	// will be a loopback address. Opening that address almost certainly will
+	// not work, so rewrite to a static host such that browsers can be
+	// configured to detect it and use a ssh SOCKS proxy.
+	var addr string
+	if remoteIP := conn.RemoteAddr().(*net.TCPAddr).IP; remoteIP.IsLoopback() {
+		addr = "lemonade.remote.devbox"
+	} else {
+		addr = remoteIP.String()
+	}
 
 	if len(host) == 1 {
 		parsed.Host = addr
